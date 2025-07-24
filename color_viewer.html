@@ -1,0 +1,2395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>농작물 대표 색상 뷰어</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .crop-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.2s ease;
+        }
+        .crop-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .color-bar {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            font-size: 18px;
+        }
+        .crop-info {
+            padding: 16px;
+        }
+        .crop-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .color-code {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            color: #666;
+            background: #f8f8f8;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+        .image-link {
+            font-size: 12px;
+            color: #888;
+            text-decoration: none;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+        .image-link:hover {
+            color: #0066cc;
+        }
+        .stats {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .no-results {
+            text-align: center;
+            color: #666;
+            font-size: 18px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌾 농작물 대표 색상 뷰어</h1>
+        
+        <input type="text" class="search-box" id="searchInput" placeholder="농작물명으로 검색...">
+        
+        <div class="stats" id="stats"></div>
+        
+        <div class="grid" id="cropGrid"></div>
+        
+        <div class="no-results" id="noResults" style="display: none;">
+            검색 결과가 없습니다.
+        </div>
+    </div>
+
+    <script>
+        // 임베드된 데이터
+        const cropData = [
+        {
+                "crop_name": "x(임시)",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "가지",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_eggplant.png",
+                "dominant_color": "#000001"
+        },
+        {
+                "crop_name": "각구도라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "감",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_persimmon.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "감귤",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_mandarin.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "감자",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_potato.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "강낭콩",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_red-bean.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "개나리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "개미취",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "개양귀비",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "거베라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "거취옥",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "고구마",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_sweet-potato.png",
+                "dominant_color": "#010000"
+        },
+        {
+                "crop_name": "고데치아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "고무나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "고추",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_pepper.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "골드킹",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "골든볼",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "공작초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "과꽃",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "관음죽",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "광나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "국화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "군자란",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "그람버",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "극락조화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "글라디올러스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "글로리오사",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "글록시니아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "금귤",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_mandarin.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "금꿩의다리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "금낭화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "금사철",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "금어초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "금잔화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "금황환철화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "기린초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "깻잎",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_perilla-leaf.png",
+                "dominant_color": "#000101"
+        },
+        {
+                "crop_name": "꽃고추",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "꽃기린",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "꽃베고니아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "꽃사과나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "꽃호박",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "꽈리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "나팔꽃",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "낙산홍",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "낙엽관목류",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "낙엽교목류",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "남제옥",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "남천",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "냉이초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "네모필라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "네프로네피스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "노단새",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "노무라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "능소화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "니겔라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "니포피아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "다래",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_kiwi.png",
+                "dominant_color": "#010201"
+        },
+        {
+                "crop_name": "다알리아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "다정금",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "단풍",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "담쟁이",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "당근",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_carrot.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "대추",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_jujube.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "대파",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leek.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "데이지",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "덴드로비움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "덴파레",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "델피늄",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "델피니움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "도라지",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_bellflower-root.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "돈나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "동백",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "동백나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "동양란",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "동양심비",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "두릅나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_aralia-elata.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "두메",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "두우각",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "둥글레잎",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "드라세나",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "드럼스틱",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "들깨",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_perilla.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "등골나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "등나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "디기탈리스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "디디스커스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "디스키디아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "디스텔",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "디지고데카",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "디펜바키아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "딸기",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_strawberry.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "라그라스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "라넌큐라스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "라넌큘러스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "라벤더",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "라이스플라워",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "라일락",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "락스퍼",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "레드베리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "레몬",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_lemon.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "레인보우",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "로단세",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "로벨리아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "로자",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "로즈마리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "루드베키아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "루피너스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "리시안사스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "리아트리스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "리코리스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "마",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_cassava.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "마가렛",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "마가목",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "마늘",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_garlic.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "마도리카리아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "마란타",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "마삭줄",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "마스데발리야",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "만년청",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "말채나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "망고",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_mango.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "매발톱",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "매실",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_japanese-apricot.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "매화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "맥문동",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "맨드라미",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "메리골드",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "멕시칸세이지",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "명자란",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "모나르다",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "모날다",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "모르세라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "목련",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "목화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "몬스테라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "무궁화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "무스카리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "물망초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "미니볼",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "미리오그라다스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "미모사",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "밀토니야",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "반다",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "밥티시아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "배",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_asian-pear.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "배추",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_cabbage.png",
+                "dominant_color": "#000101"
+        },
+        {
+                "crop_name": "백야",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "백일홍",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "백합",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "버들나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "버베나",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "범부채",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "범의꼬리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "베고니아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "베로니카",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "벼",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_grain.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "병솔꽃나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "보리사초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "복분자",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_mulberry.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "복숭아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_peach.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "봉선화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "부겐빌레아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "부들",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "부추",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_chives.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "부프리움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "분꽃",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "불로초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "붓꽃",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "붓순나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "뷰티밀러",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "브라시아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "브로콜리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_broccoli.png",
+                "dominant_color": "#000101"
+        },
+        {
+                "crop_name": "브바르디아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "블랙베리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "블루베리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_blueberry.png",
+                "dominant_color": "#000101"
+        },
+        {
+                "crop_name": "비덴스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "비부리움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "비올라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "비트",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_beet.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "뽀삐",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "사과",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_apple.png",
+                "dominant_color": "#020101"
+        },
+        {
+                "crop_name": "사루비아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "사철나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "사포나리아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "산더소니아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "산세베리아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "상추",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_lettuce.png",
+                "dominant_color": "#010000"
+        },
+        {
+                "crop_name": "색동호박",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "샐릭스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "생강",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_ginger.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "석무초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "석죽",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "선인장",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "설유화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "센토레아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "셀륨",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "소리다스터",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "소재",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "소철",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "속새",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "솔리다고",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "솔리다스터",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "수국",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "수레국",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "수련",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "수박",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_watermelon.png",
+                "dominant_color": "#030202"
+        },
+        {
+                "crop_name": "수선",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "수세미",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "수수",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스노우베리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스마일낙스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스모그트리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스위트피",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스카비오사",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스킨답서스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스타티스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스테파노티스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스토크",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스톡크",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스파락시스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "스파티필럼",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "시금치",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_spinach.png",
+                "dominant_color": "#000101"
+        },
+        {
+                "crop_name": "시네라리아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "시넨시스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "시레네",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "시클라멘",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "신지매",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "심비디움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "심포리카르포스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "심포리카포스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "싱고니움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아가판서스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아게라덤",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아그로템마",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아글라오네마",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아나나스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아네모네",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아데니움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아디안텀",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아로니아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아르메리아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아마릴리스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아미초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아부틸론",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아스그레피아스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아스트란시아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아스틸베",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아스파라거스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_asparagus.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아이리스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아이비",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아이스플랜트",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아카시아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아코니톰",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아킬레아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아트리플랙스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "아티쵸크",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "안개꽃",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "안스리움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "안시리움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "알로에",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "알로카시아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "알리움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "알스트로메리아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "암",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "앙그레컴",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "애니고잔소스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "애플민트",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "야생화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "야자",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "양란",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "양배추",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_yangbaechu.png",
+                "dominant_color": "#020201"
+        },
+        {
+                "crop_name": "양파",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_onion.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "억새",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "엄나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "엉겅퀴",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "에렌지움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "에리카",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "에키네시아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "에키놉스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "여우얼굴",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "여주",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "연꽃",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "연밥",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "열매",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "엽란",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "오가피",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "오니소갈럼",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "오디",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_mulberry.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "오렌지",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_orange.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "오색고추",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "오이",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_cucumber.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "오이초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "옥살리스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "옥수수",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_corn.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "옥시페탈륨",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "옥잠화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "온시디움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "올리브옥",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "왁스플라워",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "용담",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "유도화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "유스가스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "유칼립투스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "유포로비아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "은사철",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "은엽",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "이끼시아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "이베리스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "이소토마",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "익소라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "익시아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "인삼",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_ginseng.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "일일초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "임파티엔스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "잎새",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "잎안개",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "자금우",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "자두",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_plum.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "작살나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "작약",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "잔디",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "잣",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "장미",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "쟈스민",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "절화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "제라늄",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "제브리나",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "조팝",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "쥐똥나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "진달래",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "참깨",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_sesame.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "참다래(키위)",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_kiwi.png",
+                "dominant_color": "#010201"
+        },
+        {
+                "crop_name": "참외",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_oriental-melon.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "창출",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "창포",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "채송화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "천일홍",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "천조초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "철쭉",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "청지목",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "체리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_cherry.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "취상",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "측백",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "층꽃",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "치자",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "카네이션",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "카랑코에",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "카틀레야",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "칸나",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "칼라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "칼라디움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "칼랑코에",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "칼세오라리아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "캄파눌라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "캐모마일",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "커피나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "케로네",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "코르딜리네",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "코스모스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "코와니",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "코키아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "콩",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_bean.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "쿠루쿠마",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "쿠페아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "크로커스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "크리산세멈",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "크리스탈",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "클레마티스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "클레오메",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "탑사철",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "토레니아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "토마토",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_tomato.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "톱꽃",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "튜립",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "튜울립",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "트리토니아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "트리토마",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "트리플륨",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "파",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leek.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "파니쿰",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "파인애플",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_pineapple.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "파인애플세이지",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "파키라",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "파프리카",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_paprika.png",
+                "dominant_color": "#010000"
+        },
+        {
+                "crop_name": "파피오페딜리움",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "팔레높시스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "팔손이",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "팥",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_red-bean.png",
+                "dominant_color": "#010101"
+        },
+        {
+                "crop_name": "팥꽃나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "패랭이",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "팬지",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "페튜니아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "페페로미아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "펜스테몬",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "펜타스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "편백나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "포도",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_grape.png",
+                "dominant_color": "#000001"
+        },
+        {
+                "crop_name": "포리안사스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "포인세티아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "표고버섯",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_shiitake-mushroom.png",
+                "dominant_color": "#010000"
+        },
+        {
+                "crop_name": "풍선꽃",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "풍선초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "프리뮬러",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "프리지아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "프리틸라리아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "피마자",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "피망",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_pimento.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "피토니아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "피토스포륨",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "필라리스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "필레아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "필로덴드론",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "핑크뮬리",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "하이페리콤",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "하이포에스테스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "한련화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "해바라기",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "해피엔젤",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "허브(기타)",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "헬레늄",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "헬레보루스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "헬리옵시스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "헬리크리섬",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "호두나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_walnut.png",
+                "dominant_color": "#000000"
+        },
+        {
+                "crop_name": "호랑이눈",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "호박",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_pumpkin.png",
+                "dominant_color": "#010100"
+        },
+        {
+                "crop_name": "호야",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "호엽란",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "호접란",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "홍가시",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "홍금초",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "홍죽",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "홍화",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "화살나무",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "화훼류",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "황금쥐땅",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "황색코스모스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "후록스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "후쿠시아",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        },
+        {
+                "crop_name": "히야신스",
+                "image_url": "https://static.farmmorning.com/crop/20230725/common_ic_leaf.png",
+                "dominant_color": "#000100"
+        }
+];
+        
+        // 색상의 밝기를 계산하는 함수 (텍스트 색상 결정용)
+        function getTextColor(hexColor) {
+            const r = parseInt(hexColor.substr(1, 2), 16);
+            const g = parseInt(hexColor.substr(3, 2), 16);
+            const b = parseInt(hexColor.substr(5, 2), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            return brightness > 128 ? '#000000' : '#ffffff';
+        }
+        
+        // 농작물 카드를 생성하는 함수
+        function createCropCard(crop) {
+            const textColor = getTextColor(crop.dominant_color);
+            
+            return `
+                <div class="crop-card">
+                    <div class="color-bar" style="background-color: ${crop.dominant_color}; color: ${textColor};">
+                        ${crop.dominant_color}
+                    </div>
+                    <div class="crop-info">
+                        <div class="crop-name">${crop.crop_name}</div>
+                        <div class="color-code">${crop.dominant_color}</div>
+                        <a href="${crop.image_url}" target="_blank" class="image-link">
+                            ${crop.image_url}
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 그리드를 렌더링하는 함수
+        function renderGrid(data) {
+            const grid = document.getElementById('cropGrid');
+            const noResults = document.getElementById('noResults');
+            
+            if (data.length === 0) {
+                grid.style.display = 'none';
+                noResults.style.display = 'block';
+            } else {
+                grid.style.display = 'grid';
+                noResults.style.display = 'none';
+                grid.innerHTML = data.map(createCropCard).join('');
+            }
+            
+            // 통계 업데이트
+            document.getElementById('stats').textContent = `총 ${data.length}개의 농작물`;
+        }
+        
+        // 검색 기능
+        function filterCrops(searchTerm) {
+            const filtered = cropData.filter(crop => 
+                crop.crop_name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            renderGrid(filtered);
+        }
+        
+        // 초기 렌더링
+        renderGrid(cropData);
+        
+        // 검색 이벤트 리스너
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            filterCrops(e.target.value);
+        });
+    </script>
+</body>
+</html>
